@@ -26,21 +26,16 @@ Upload a 10-K, annual report, or credit memo PDF. The system extracts text page-
 
 ```mermaid
 flowchart TD
-    classDef title fill:#181825,stroke:#cba6f7,stroke-width:2px,color:#cdd6f4,font-weight:bold;
     classDef nodeStyle fill:#1e1e2e,stroke:#89b4fa,stroke-width:1.5px,color:#cdd6f4;
     classDef uiStyle fill:#313244,stroke:#a6e3a1,stroke-width:1.5px,color:#cdd6f4;
 
-    TITLE["LOCAL AI FINANCIAL AUDITOR"]:::title
-
-    subgraph WORKFLOW ["Data Extraction & Analysis Pipeline"]
-        PDF["<b>PDF Upload</b><br/>(10-K, Annual Report, Credit Memo)"]:::nodeStyle
-        EXT["<b>core_extractor.py</b><br/><code>extract_pdf_text()</code>"]:::nodeStyle
-        FITZ["<b>PyMuPDF (fitz) Text Stream</b><br/>• Page 1<br/>• Page 2<br/>• Page N"]:::nodeStyle
-        LLM_CALL["<b>analyze_pdf_text()</b><br/>OpenAI Python SDK<br/><code>POST /v1/chat/completions</code>"]:::nodeStyle
-        OLLAMA["<b>Ollama API Server</b><br/><code>:11434/v1</code><br/>• Model: <code>qwen3.6:27b</code><br/>• Temperature: 0.1"]:::nodeStyle
-        PYDANTIC["<b>Pydantic Schema Parsing & Validation</b><br/><code>RedFlagReport</code><br/>└─ <code>list[RiskItem]</code>"]:::nodeStyle
-        RISKS["<b>Validated Risk Items</b><br/>• High / Medium / Low<br/>• Excerpt + Page Number"]:::nodeStyle
-    end
+    PDF["<b>PDF Upload</b><br/>(10-K, Annual Report, Credit Memo)"]:::nodeStyle
+    EXT["<b>core_extractor.py</b><br/><code>extract_pdf_text()</code>"]:::nodeStyle
+    FITZ["<b>PyMuPDF (fitz) Text Stream</b><br/>• Page 1<br/>• Page 2<br/>• Page N"]:::nodeStyle
+    LLM_CALL["<b>analyze_pdf_text()</b><br/>OpenAI Python SDK<br/><code>POST /v1/chat/completions</code>"]:::nodeStyle
+    OLLAMA["<b>Ollama API Server</b><br/><code>:11434/v1</code><br/>• Model: <code>qwen3.6:27b</code><br/>• Temperature: 0.1"]:::nodeStyle
+    PYDANTIC["<b>Pydantic Schema Parsing & Validation</b><br/><code>RedFlagReport</code><br/>└─ <code>list[RiskItem]</code>"]:::nodeStyle
+    RISKS["<b>Validated Risk Items</b><br/>• High / Medium / Low<br/>• Excerpt + Page Number"]:::nodeStyle
 
     UI["<b>Streamlit UI</b><br/>(<code>app.py</code>)<br/>• Metric cards<br/>• Risk cards<br/>• DataFrame view<br/>• Excel export"]:::uiStyle
 
