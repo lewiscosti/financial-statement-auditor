@@ -30,9 +30,9 @@ PAGE_TITLE = "Financial Statement Auditor"
 
 # High-contrast dark theme badge & card colors
 BADGE_COLORS = {
-    "High": ("#ff4d4f", "#2a1215"),    # Red badge, dark red container background
+    "High": ("#ff4d4f", "#2a1215"),  # Red badge, dark red container background
     "Medium": ("#faad14", "#2b2111"),  # Amber badge, dark amber container background
-    "Low": ("#52c41a", "#132313"),     # Green badge, dark green container background
+    "Low": ("#52c41a", "#132313"),  # Green badge, dark green container background
 }
 
 
@@ -106,7 +106,11 @@ def _process_upload(
         st.session_state.error = f"Failed to parse model output: {exc}"
     except ExtractionError as exc:
         st.session_state.error = str(exc)
-    except Exception as exc:
+    # PyMuPDF raises RuntimeError subclasses (e.g. FileDataError,
+    # FileNotFoundError) for corrupt/unreadable PDFs; OSError covers
+    # temp-file I/O failures and ValueError guards malformed inputs.
+    # Catching these specific types avoids a blind `except Exception` (Ruff BLE001).
+    except (OSError, ValueError, RuntimeError) as exc:
         st.session_state.error = f"Unexpected error during analysis: {exc}"
     finally:
         tmp_path.unlink(missing_ok=True)
@@ -155,24 +159,32 @@ def _generate_pdf_report(risk_items: list) -> io.BytesIO:
 
     table_data = [["Page", "Level", "Category", "Finding Title"]]
     for item in risk_items:
-        r_level = item.risk_level.value if hasattr(item.risk_level, "value") else str(item.risk_level)
-        table_data.append([
-            str(item.page_number),
-            r_level,
-            item.category,
-            item.flag_title,
-        ])
+        r_level = (
+            item.risk_level.value
+            if hasattr(item.risk_level, "value")
+            else str(item.risk_level)
+        )
+        table_data.append(
+            [
+                str(item.page_number),
+                r_level,
+                item.category,
+                item.flag_title,
+            ]
+        )
 
     t = Table(table_data, colWidths=[40, 60, 150, 300])
     t.setStyle(
-        TableStyle([
-            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1f2937")),
-            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-            ("ALIGN", (0, 0), (-1, -1), "LEFT"),
-            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-            ("BOTTOMPADDING", (0, 0), (-1, 0), 6),
-            ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
-        ])
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1f2937")),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("BOTTOMPADDING", (0, 0), (-1, 0), 6),
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+            ]
+        )
     )
     story.append(t)
     doc.build(story)
@@ -185,14 +197,28 @@ def _sort_risk_items(items: list, sort_option: str) -> list:
     level_weights = {"High": 0, "Medium": 1, "Low": 2}
 
     def get_level_str(x):
-        return x.risk_level.value if hasattr(x.risk_level, "value") else str(x.risk_level)
+        return (
+            x.risk_level.value if hasattr(x.risk_level, "value") else str(x.risk_level)
+        )
 
     if sort_option == "Risk (Descending: High → Low)":
-        return sorted(items, key=lambda x: (level_weights.get(get_level_str(x), 9), x.page_number))
+        return sorted(
+            items, key=lambda x: (level_weights.get(get_level_str(x), 9), x.page_number)
+        )
     elif sort_option == "Risk (Ascending: Low → High)":
-        return sorted(items, key=lambda x: (-level_weights.get(get_level_str(x), 0), x.page_number))
+        return sorted(
+            items,
+            key=lambda x: (-level_weights.get(get_level_str(x), 0), x.page_number),
+        )
     elif sort_option == "Category → Risk → Page":
-        return sorted(items, key=lambda x: (x.category, level_weights.get(get_level_str(x), 9), x.page_number))
+        return sorted(
+            items,
+            key=lambda x: (
+                x.category,
+                level_weights.get(get_level_str(x), 9),
+                x.page_number,
+            ),
+        )
     elif sort_option == "Page Number":
         return sorted(items, key=lambda x: x.page_number)
     return items
@@ -200,7 +226,11 @@ def _sort_risk_items(items: list, sort_option: str) -> list:
 
 def _render_risk_card(item) -> None:
     """Renders a high-contrast dark card with bright readable title text."""
-    r_level = item.risk_level.value if hasattr(item.risk_level, "value") else str(item.risk_level)
+    r_level = (
+        item.risk_level.value
+        if hasattr(item.risk_level, "value")
+        else str(item.risk_level)
+    )
     fg_color, bg_color = BADGE_COLORS.get(r_level, ("#ffffff", "#222222"))
 
     st.markdown(
@@ -308,7 +338,9 @@ def main() -> None:
 
         if is_new_file or rerun:
             with st.spinner("Extracting text and analyzing red flags…"):
-                _process_upload(file_bytes, uploaded_file.name, base_url, api_key, model)
+                _process_upload(
+                    file_bytes, uploaded_file.name, base_url, api_key, model
+                )
             st.session_state.last_file_hash = current_hash
 
     report: RedFlagReport | None = st.session_state.report
@@ -384,7 +416,8 @@ def main() -> None:
             if search_query:
                 q = search_query.lower()
                 filtered_items = [
-                    item for item in filtered_items
+                    item
+                    for item in filtered_items
                     if q in item.flag_title.lower()
                     or q in item.analysis.lower()
                     or q in item.excerpt.lower()
@@ -394,7 +427,9 @@ def main() -> None:
             # Sorting logic
             sorted_items = _sort_risk_items(filtered_items, sort_choice)
 
-            st.caption(f"Showing **{len(sorted_items)}** of **{len(report.risk_items)}** flags")
+            st.caption(
+                f"Showing **{len(sorted_items)}** of **{len(report.risk_items)}** flags"
+            )
 
             # Render Cards
             for item in sorted_items:

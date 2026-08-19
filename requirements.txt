@@ -4,3 +4,4 @@ openai
 PyMuPDF
 pandas
 openpyxl
+reportlab

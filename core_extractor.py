@@ -104,7 +104,9 @@ def extract_pdf_chunks(pdf_path: str | Path, pages_per_chunk: int = 12) -> list[
         for page_index in range(doc.page_count):
             page = doc.load_page(page_index)
             page_number = page_index + 1
-            text = page.get_text("text").strip()
+            # PyMuPDF's get_text() lacks a precise return annotation (basedpyright
+            # infers str | list | dict); with option="text" it always returns str.
+            text = str(page.get_text("text")).strip()
 
             if text:
                 current_chunk_pages.append(f"--- Page {page_number} ---\n{text}")
