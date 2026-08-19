@@ -1,6 +1,6 @@
 # **Local AI Financial Statement Auditor**
 
-Automated red-flag and footnote risk extraction from financial PDFs — powered entirely by **local** large language models. No cloud APIs, no data egress, no compliance headaches.
+Automated red-flag and footnote risk extraction from financial PDFs — powered entirely by **local** large language models. No cloud APIs or associated compliance issues.
 
 ---
 
@@ -18,7 +18,7 @@ Corporate finance teams routinely handle material non-public information (MNPI),
 | Structured output | Variable | **Pydantic-validated JSON** |
 | Audit trail | Opaque | **Full local logs & Excel export** |
 
-Upload a 10-K, annual report, or credit memo PDF. The system extracts text page-by-page, sends it to a locally hosted **Qwen 3.6** model via the Ollama OpenAI-compatible API, validates every finding against a strict schema, and presents results in an executive dashboard with exportable audit logs.
+Upload a 10-K, annual report, or credit memo PDF. The system extracts text page-by-page, sends it to a locally hosted **Qwen 3.8** model via the Ollama OpenAI-compatible API, validates every finding against a strict schema, and presents results in an executive dashboard with exportable audit logs.
 
 ---
 
