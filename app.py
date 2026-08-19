@@ -329,7 +329,7 @@ def main() -> None:
             value=default_model,
             help="Specify exact model identifier.",
         )
-        rerun = st.button("Re-run Analysis", use_container_width=True)
+        rerun = st.button("Re-run Analysis", width="stretch")
 
     if uploaded_file is not None:
         file_bytes = uploaded_file.getvalue()
@@ -398,7 +398,7 @@ def main() -> None:
                     data=df_summary.to_csv(index=False).encode("utf-8"),
                     file_name=f"{export_stem}_red_flags.csv",
                     mime="text/csv",
-                    use_container_width=True,
+                    width="stretch",
                 )
 
             with c4:
@@ -408,7 +408,7 @@ def main() -> None:
                     data=pdf_buffer,
                     file_name=f"{export_stem}_red_flags.pdf",
                     mime="application/pdf",
-                    use_container_width=True,
+                    width="stretch",
                 )
 
             # Filtering logic
@@ -441,7 +441,7 @@ def main() -> None:
             st.write("No audit log data available.")
         else:
             df = _report_to_dataframe(report)
-            st.dataframe(df, use_container_width=True, hide_index=True)
+            st.dataframe(df, width="stretch", hide_index=True)
 
             excel_buffer = BytesIO()
             with pd.ExcelWriter(excel_buffer, engine="openpyxl") as writer:
@@ -456,7 +456,7 @@ def main() -> None:
                 data=excel_buffer,
                 file_name=export_name,
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                use_container_width=True,
+                width="stretch",
             )
 
 
