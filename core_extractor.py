@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from pathlib import Path
 from typing import Literal
 
@@ -13,10 +14,30 @@ from pydantic import BaseModel, Field, ValidationError
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_BASE_URL = "http://localhost:11434/v1"
-DEFAULT_MODEL = "qwen3.6:27b"
-DEFAULT_MAX_TOKENS = 6144
-DEFAULT_TEMPERATURE = 0.1
+DEFAULT_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1")
+DEFAULT_MODEL = os.getenv("OLLAMA_MODEL", "qwen-3.8-instruct:latest")
+
+# Sampling parameters for the extraction call
+DEFAULT_TEMPERATURE = 0.7
+EXTRACTION_TOP_P = 0.8
+EXTRACTION_PRESENCE_PENALTY = 1.5
+DEFAULT_MAX_TOKENS = 131072
+
+# Ollama-specific options, passed via extra_body to the OpenAI-compatible endpoint.
+# - num_ctx: 128k token context window so large documents are not truncated
+# - num_predict: 32k max output tokens so the JSON response is not cut off
+# - chat_template_kwargs: disables Qwen3 "thinking" mode (it breaks structured output)
+OLLAMA_EXTRA_BODY = {
+    "top_k": 20,
+    "num_ctx": 131072,
+    "num_predict": 32768,
+    "chat_template_kwargs": {"enable_thinking": False},
+}
+
+client = OpenAI(
+    base_url=DEFAULT_BASE_URL,
+    api_key=os.getenv("OLLAMA_API_KEY", "ollama"),
+)
 
 RiskLevel = Literal["High", "Medium", "Low"]
 
@@ -84,7 +105,7 @@ def extract_pdf_chunks(pdf_path: str | Path, pages_per_chunk: int = 12) -> list[
             page = doc.load_page(page_index)
             page_number = page_index + 1
             text = page.get_text("text").strip()
-            
+
             if text:
                 current_chunk_pages.append(f"--- Page {page_number} ---\n{text}")
 
@@ -149,7 +170,7 @@ def analyze_pdf_text(
 
     # Determine if endpoint is local to include Ollama-specific extra_body settings
     is_local = "localhost" in base_url or "127.0.0.1" in base_url
-    
+
     extra_body = {}
     if is_local:
         extra_body = {
@@ -234,6 +255,8 @@ def analyze_pdf_text(
             logger.error(f"Failed to parse chunk {chunk_idx} output: {exc}")
 
     if len(chunks) > 0 and successful_chunks == 0:
-        raise ParseError("Model failed to return valid JSON output across all document chunks.")
+        raise ParseError(
+            "Model failed to return valid JSON output across all document chunks."
+        )
 
     return RedFlagReport(risk_items=aggregated_risk_items)
