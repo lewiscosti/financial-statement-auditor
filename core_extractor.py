@@ -185,7 +185,7 @@ def analyze_pdf_text(
 
     system_prompt = (
         "You are an automated financial due-diligence API endpoint. "
-        "OUTPUT VALID JSON ONLY. Do NOT output internal reasoning or thinking logs. "
+        "OUTPUT VALID JSON ONLY! Do NOT output internal reasoning or thinking logs. "
         "Review the supplied document text block and identify material red flags—accounting "
         "irregularities, liquidity concerns, governance issues, related-party "
         "transactions, going-concern language, covenant breaches, and similar risks. "
