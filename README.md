@@ -1,26 +1,41 @@
-# **Local AI Financial Statement Auditor**
+# Local AI Financial Statement & Disclosure Risk Auditor
 
-Automated red-flag and footnote risk extraction from financial PDFs — powered entirely by **local** large language models. No cloud APIs or associated compliance issues.
+An independent Python project exploring how **locally hosted language models can support financial statement review** while keeping source evidence traceable.
+
+The application analyses financial PDFs for potential disclosure risks across areas such as **liquidity, debt, governance, related-party transactions and revenue recognition**, returning structured findings alongside the supporting excerpt and page reference for human verification.
+
+Rather than treating the LLM as the final analyst, the project is designed around a simple principle: **AI can accelerate document review, but the underlying evidence should remain visible and auditable.**
+
+---
+
+## What the Application Does
+
+1. Extracts financial-report text page-by-page using **PyMuPDF**.
+2. Sends extracted text to a **locally hosted LLM through Ollama**, avoiding the need to transmit the document to an external LLM API.
+3. Uses **Pydantic schemas** to enforce structured outputs.
+4. Identifies and classifies potential financial and disclosure risks by category and severity.
+5. Returns the **source excerpt and page number** alongside each finding so the user can verify it against the original document.
+6. Presents results through a **Streamlit dashboard** and exports structured findings to Excel.
+
+> **Project type:** Independent personal project  
+> **Tools:** Python, PyMuPDF, Pydantic, Ollama, Streamlit, Pandas, OpenAI-compatible local API
 
 ---
 
-## Executive Overview
+## Why I Built It
 
-Corporate finance teams routinely handle material non-public information (MNPI), audit workpapers, covenant packages, and counterparty financials bound by **NDAs**, **SOC 2** obligations, and sector-specific regulations (SOX, GDPR, M&A data rooms). Sending these documents to third-party cloud LLM providers introduces unacceptable risk: data residency violations, subprocessors outside approved jurisdictions, and audit trails that cannot satisfy internal InfoSec review.
+When analysing an annual report, much of the time is spent locating and organising potentially relevant information before deciding whether it actually matters.
 
-**Local AI Financial Statement Auditor** solves this by keeping the full pipeline on-premises:
+I wanted to explore whether a local LLM could help with that first stage without turning the model into a black-box decision maker.
 
-| Concern | Cloud LLM | This Project |
-|---|---|---|
-| Data leaves the network | Yes | **No** |
-| NDA / MNPI safe | Requires legal carve-outs | **Yes — air-gapped capable** |
-| Model choice | Vendor-locked | **Any Ollama-compatible model** |
-| Structured output | Variable | **Pydantic-validated JSON** |
-| Audit trail | Opaque | **Full local logs & Excel export** |
+The main challenge was therefore not simply getting an LLM to summarise a financial report. I wanted the output to be:
 
-Upload a 10-K, annual report, or credit memo PDF. The system extracts text page-by-page, sends it to a locally hosted **Qwen 3.8** model via the Ollama OpenAI-compatible API, validates every finding against a strict schema, and presents results in an executive dashboard with exportable audit logs.
+- **structured**, so findings could be compared and exported;
+- **traceable**, so each finding could be checked against the source;
+- **locally processed**, so the workflow did not depend on sending the document to an external LLM API; and
+- **human-reviewed**, so classification by the model was treated as a prompt for further analysis rather than a definitive conclusion.
 
----
+This led to the page-aware extraction and validation workflow used in the application.
 
 ## System Architecture
 
@@ -53,12 +68,13 @@ flowchart TD
 
 ## Features
 
-- **Page-aware PDF ingestion** — PyMuPDF extracts text with `--- Page N ---` markers for accurate citation
-- **Structured LLM output** — OpenAI `response_format` + Pydantic `RedFlagReport` schema enforcement
-- **Risk classification** — Every finding tagged High, Medium, or Low with category, excerpt, and analysis
-- **Executive dashboard** — Color-coded risk cards, live metrics, and sortable audit DataFrame
-- **Export** — Download findings as a clean `.xlsx` spreadsheet for downstream review
-- **Configurable runtime** — Swap models and API endpoints from the sidebar without code changes
+- **Page-aware PDF ingestion** — PyMuPDF preserves page boundaries so findings can be traced back to their source
+- **Structured LLM output** — Pydantic `RedFlagReport` schemas enforce a consistent output structure
+- **Preliminary risk classification** — Potential findings are categorised by severity, category and rationale to help prioritise human review
+- **Source traceability** — Each finding retains the supporting excerpt and page reference for verification against the original document
+- **Interactive dashboard** — Streamlit interface with summary metrics, risk cards and a sortable findings table
+- **Excel export** — Structured findings can be exported to `.xlsx` for further analysis or review
+- **Configurable local inference** — Models and API endpoints can be changed from the interface without modifying the underlying code
 
 ---
 
@@ -150,33 +166,33 @@ Open the URL printed in the terminal (default: `http://localhost:8501`).
 
 ## Sample Output Schema
 
-Every analysis returns a validated `RedFlagReport` JSON object:
+The example below illustrates the structure of a `RedFlagReport` returned by the application. The findings are deliberately framed as issues for further investigation rather than definitive conclusions.
 
 ```json
 {
   "risk_items": [
     {
       "category": "Going Concern",
-      "flag_title": "Substantial Doubt About Ability to Continue",
+      "flag_title": "Going-Concern Uncertainty",
       "risk_level": "High",
       "excerpt": "The accompanying consolidated financial statements have been prepared assuming the Company will continue as a going concern. As of December 31, 2025, the Company had accumulated deficits of $142.3 million and negative working capital of $28.7 million.",
-      "analysis": "Management explicitly raises going-concern uncertainty. Accumulated deficits combined with negative working capital indicate severe liquidity stress. Covenant breaches or inability to refinance maturing debt within 12 months would trigger default.",
+      "analysis": "The disclosure explicitly raises going-concern uncertainty, while the accumulated deficit and negative working capital indicate material financial pressure. Further review should consider available liquidity, debt maturities, covenant headroom and management's financing plans.",
       "page_number": 47
     },
     {
       "category": "Related-Party Transactions",
-      "flag_title": "Undisclosed Related-Party Lease Arrangement",
+      "flag_title": "CEO-Linked Related-Party Lease",
       "risk_level": "Medium",
       "excerpt": "The Company leases its headquarters facility from an entity wholly owned by the Chief Executive Officer. Annual rent expense totalled $3.2 million for the year ended December 31, 2025.",
-      "analysis": "Related-party lease with the CEO creates potential conflicts of interest. Rent appears above market rate relative to comparable Class-A office space in the region. Independent board review and third-party valuation recommended.",
+      "analysis": "The lease involves an entity owned by the CEO, creating a potential related-party conflict that warrants review. The excerpt alone does not establish whether the lease terms are above or below market rates, so further analysis would be required before drawing that conclusion.",
       "page_number": 82
     },
     {
       "category": "Revenue Recognition",
-      "flag_title": "Aggressive Channel-Stuffing Indicators",
+      "flag_title": "Revenue Recognition Review Indicator",
       "risk_level": "Low",
       "excerpt": "Days sales outstanding increased from 42 days to 67 days year-over-year, while revenue grew 18% in Q4 relative to prior quarters.",
-      "analysis": "DSO deterioration alongside Q4 revenue acceleration may indicate channel stuffing or premature revenue recognition. Trend warrants further scrutiny of Q4 shipment and return patterns.",
+      "analysis": "The combination of higher DSO and stronger Q4 revenue may warrant further review of revenue recognition, shipment timing, receivables and returns. The information provided is not sufficient on its own to conclude that aggressive revenue recognition has occurred.",
       "page_number": 31
     }
   ]
@@ -185,15 +201,15 @@ Every analysis returns a validated `RedFlagReport` JSON object:
 
 ### Schema Reference
 
-| Field | Type | Description |
-|---|---|---|
-| `risk_items` | `array` | List of identified red flags |
-| `risk_items[].category` | `string` | Risk domain (e.g. Liquidity, Governance) |
-| `risk_items[].flag_title` | `string` | Short descriptive title |
-| `risk_items[].risk_level` | `"High" \| "Medium" \| "Low"` | Severity classification |
-| `risk_items[].excerpt` | `string` | Verbatim quote from the source document |
-| `risk_items[].analysis` | `string` | Analyst narrative explaining the concern |
-| `risk_items[].page_number` | `integer` | 1-indexed page reference (≥ 1) |
+| Field                      | Type                           | Description                                                     |
+| -------------------------- | ------------------------------ | --------------------------------------------------------------- |
+| `risk_items`               | `array`                        | List of potential findings identified for review                |
+| `risk_items[].category`    | `string`                       | Financial or disclosure risk category                           |
+| `risk_items[].flag_title`  | `string`                       | Short description of the potential issue                        |
+| `risk_items[].risk_level`  | `"High" \| "Medium" \| "Low"` | Preliminary severity classification used to prioritise review   |
+| `risk_items[].excerpt`     | `string`                       | Supporting excerpt retained from the source document            |
+| `risk_items[].analysis`    | `string`                       | LLM-generated rationale explaining why the finding may matter   |
+| `risk_items[].page_number` | `integer`                      | Page reference used to trace the finding to the source document |
 
 ---
 
@@ -229,7 +245,14 @@ The document may be image-only (scanned). OCR preprocessing is not included in t
 MIT — see repository for details.
 
 ---
+## Limitations
 
-## Disclaimer
+This project is designed to **support, not replace, human financial analysis**.
 
-This tool assists human review; it does not constitute financial, legal, or audit advice. All findings must be validated by qualified professionals before reliance in credit, investment, or regulatory decisions.
+LLM-generated findings, severity classifications and commentary may be incomplete or incorrect. A flagged item should therefore be treated as a prompt for further investigation rather than evidence that a financial, accounting or governance issue exists.
+
+Source excerpts and page references are retained specifically so findings can be checked against the original document before being relied upon. The quality of the analysis also depends on the quality of the extracted PDF text and the capabilities of the selected local model.
+
+The current version does not include OCR preprocessing for image-only PDFs and has not been validated for production credit, investment, audit, legal or regulatory use.
+
+This is an **independent personal project** developed to explore the application of local AI to financial-document analysis.
